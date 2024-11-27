@@ -1,0 +1,122 @@
+<?php
+session_start();
+include 'db_connection.php';
+
+if (!isset($_GET['id'])) {
+    header('Location: transactions.php');
+    exit();
+}
+
+$transaction_id = mysqli_real_escape_string($conn, $_GET['id']);
+
+$query = "SELECT bt.*, b.title as book_title, b.author, m.first_name, m.last_name, 
+          p.amount as penalty_amount, p.reason as penalty_reason
+          FROM borrowingtransactions bt 
+          JOIN books b ON bt.book_id = b.book_id 
+          JOIN members m ON bt.member_id = m.member_id 
+          LEFT JOIN penalties p ON bt.transaction_id = p.transaction_id
+          WHERE bt.transaction_id = '$transaction_id'";
+
+$result = mysqli_query($conn, $query);
+$transaction = mysqli_fetch_assoc($result);
+
+if (!$transaction) {
+    header('Location: transactions.php');
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Transaction #<?php echo $transaction_id; ?></title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            font-size: 16px;
+            line-height: 24px;
+            font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+        }
+        .invoice-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .text-right {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="invoice-box">
+            <div class="invoice-header">
+                <h2>Library Management System</h2>
+                <h4>Transaction Invoice #<?php echo $transaction_id; ?></h4>
+                <p>Date: <?php echo date('Y-m-d'); ?></p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Member Details:</h5>
+                    <p>
+                        Name: <?php echo $transaction['first_name'] . ' ' . $transaction['last_name']; ?><br>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h5>Book Details:</h5>
+                    <p>
+                        Title: <?php echo $transaction['book_title']; ?><br>
+                        Author: <?php echo $transaction['author']; ?>
+                    </p>
+                </div>
+            </div>
+
+            <table class="table mt-4">
+                <tr>
+                    <td><strong>Borrow Date:</strong></td>
+                    <td><?php echo $transaction['borrow_date']; ?></td>
+                </tr>
+                <tr>
+                    <td><strong>Due Date:</strong></td>
+                    <td><?php echo $transaction['due_date']; ?></td>
+                </tr>
+                <tr>
+                    <td><strong>Return Date:</strong></td>
+                    <td><?php echo $transaction['return_date'] ? $transaction['return_date'] : 'Not returned'; ?></td>
+                </tr>
+                <tr>
+                    <td><strong>Return Condition:</strong></td>
+                    <td><?php echo $transaction['return_condition'] ? $transaction['return_condition'] : 'N/A'; ?></td>
+                </tr>
+                <?php if ($transaction['penalty_amount'] > 0): ?>
+                <tr>
+                    <td><strong>Penalty Amount:</strong></td>
+                    <td>₱<?php echo number_format($transaction['penalty_amount'], 2); ?></td>
+                </tr>
+                <tr>
+                    <td><strong>Penalty Reason:</strong></td>
+                    <td><?php echo $transaction['penalty_reason']; ?></td>
+                </tr>
+                <?php endif; ?>
+            </table>
+
+            <div class="text-right mt-4">
+                <button onclick="window.print()" class="btn btn-primary">Print Invoice</button>
+                <a href="transactions.php" class="btn btn-secondary">Back to Transactions</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
